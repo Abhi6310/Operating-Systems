@@ -1,6 +1,6 @@
 # Paging Simulator
 
-[![Language: C](https://img.shields.io/badge/language-C-blue.svg)](https://www.gnu.org/software/gcc/) [![Language: R](https://img.shields.io/badge/language-R-blue.svg)](https://www.r-project.org/) [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
+[![Language: C](https://img.shields.io/badge/language-C-blue.svg)](https://www.gnu.org/software/gcc/)
 
 A virtual‐memory environment simulator that models process scheduling, page faults, and custom page‐replacement strategies, plus tools for logging and interactive visualization.
 
@@ -44,6 +44,6 @@ This simulator models multiple processes running on a (configurable) number of C
 ### Installation
 
 ```bash
-git clone https://github.com/yourusername/paging-simulator.git
+git clone https://github.com/Abhi6310/Operating-Systems/tree/main/Page_Table_Prediction
 cd paging-simulator
 make
