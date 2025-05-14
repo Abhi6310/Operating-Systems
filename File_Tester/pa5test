@@ -1,0 +1,157 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
+
+#define BUFFER_SIZE 1024
+
+/* Helper function to remove the newline from fgets input */
+void trim_newline(char *str) {
+    str[strcspn(str, "\n")] = '\0';
+}
+
+int main(int argc, char *argv[]) {
+    // Check for exactly one command-line argument (the filename)
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s filename\n", argv[0]);
+        exit(1);
+    }
+
+    // Open the file for reading and writing. If this fails, print an error and exit.
+    int fd = open(argv[1], O_RDWR);
+    if (fd < 0) {
+        fprintf(stderr, "%s error: invalid filename or cannot open file '%s': %s\n",
+                argv[0], argv[1], strerror(errno));
+        exit(255);
+    }
+
+    char input[BUFFER_SIZE];
+    // Interactive loop: processes read, write, seek, or exit commands.
+    while (1) {
+        printf("Option (r for read, w for write, s for seek, e for exit): ");
+        fflush(stdout);
+
+        // Use fgets for robust input handling. If EOF is detected, exit gracefully.
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            printf("\nEOF detected. Exiting gracefully.\n");
+            break;
+        }
+        trim_newline(input);
+
+        // Skip empty input
+        if (strlen(input) == 0)
+            continue;
+
+        if (strcmp(input, "r") == 0) {
+            // Read operation
+            printf("Enter the number of bytes you want to read: ");
+            fflush(stdout);
+            if (fgets(input, sizeof(input), stdin) == NULL) {
+                printf("\nEOF detected. Exiting gracefully.\n");
+                break;
+            }
+            trim_newline(input);
+
+            // Convert the input to a long integer.
+            long num_bytes = strtol(input, NULL, 10);
+            if (num_bytes <= 0) {
+                printf("Invalid number of bytes specified.\n");
+                continue;
+            }
+
+            // Allocate buffer to hold the data, adding one extra byte for null termination.
+            char *buffer = malloc(num_bytes + 1);
+            if (buffer == NULL) {
+                perror("malloc");
+                continue;
+            }
+
+            ssize_t bytes_read = read(fd, buffer, num_bytes);
+            if (bytes_read < 0) {
+                perror("read");
+                free(buffer);
+                continue;
+            }
+            buffer[bytes_read] = '\0'; // Ensure the buffer is null-terminated.
+
+            printf("Data read: %s\n", buffer);
+            free(buffer);
+        } 
+        else if (strcmp(input, "w") == 0) {
+            // Write operation
+            printf("Enter the data you want to write: ");
+            fflush(stdout);
+            if (fgets(input, sizeof(input), stdin) == NULL) {
+                printf("\nEOF detected. Exiting gracefully.\n");
+                break;
+            }
+            trim_newline(input);
+            size_t len = strlen(input);
+            if(len == 0) {
+                printf("No data entered to write.\n");
+                continue;
+            }
+            ssize_t bytes_written = write(fd, input, len);
+            if (bytes_written < 0) {
+                perror("write");
+                continue;
+            }
+            if ((size_t)bytes_written != len) {
+                fprintf(stderr, "Warning: only %zd out of %zu bytes were written.\n",
+                        bytes_written, len);
+            } else {
+                printf("Data was successfully written.\n");
+            }
+        } 
+        else if (strcmp(input, "s") == 0) {
+            // Seek operation
+            printf("Enter an offset value: ");
+            fflush(stdout);
+            if (fgets(input, sizeof(input), stdin) == NULL) {
+                printf("\nEOF detected. Exiting gracefully.\n");
+                break;
+            }
+            trim_newline(input);
+            long long offset = strtoll(input, NULL, 10);
+
+            printf("Enter a value for whence (0: SEEK_SET, 1: SEEK_CUR, 2: SEEK_END): ");
+            fflush(stdout);
+            if (fgets(input, sizeof(input), stdin) == NULL) {
+                printf("\nEOF detected. Exiting gracefully.\n");
+                break;
+            }
+            trim_newline(input);
+            int whence = atoi(input);
+            if (whence < 0 || whence > 2) {
+                printf("Invalid whence value. Use 0, 1, or 2.\n");
+                continue;
+            }
+
+            off_t new_offset = lseek(fd, offset, whence);
+            if (new_offset == (off_t)-1) {
+                perror("lseek");
+            } else {
+                printf("File offset successfully set to %ld.\n", (long)new_offset);
+            }
+        } 
+        else if (strcmp(input, "e") == 0) {
+            // Optional explicit exit command (in addition to Ctrl-D)
+            printf("Exiting.\n");
+            break;
+        } 
+        else {
+            // Unrecognized command; prompt the user again.
+            printf("Unrecognized option. Please try again.\n");
+        }
+    }
+
+    // Close the file and check for errors.
+    if (close(fd) < 0) {
+        perror("close");
+        exit(1);
+    }
+
+    return 0;
+}
